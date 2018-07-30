@@ -19,15 +19,15 @@ from keras.optimizers import SGD, Adam
 
 #hyper parameters
 num_filters = 8
-filter_size = (4,4)
+filter_size = (8,8)
 learning_rate = 0.001
 num_dense = 64
 mem_size = 200000
 max_epsilon = 1.0
 min_epsilon = 0.01
-annealing_steps = 100
+annealing_steps = 1000
 num_epochs = 1
-batch_size = 10
+batch_size = 50
 discout_rate = .99
 
 class DDDQNAgent:
@@ -60,8 +60,8 @@ class DDDQNAgent:
         model.add(Flatten())
         model.add(Dense(num_dense, activation='relu'))
         model.add(Dense(num_dense, activation='relu'))
-        model.add(Dense(self.action_size, activation='softmax'))
-        model.compile(loss='mse', optimizer=SGD(lr=learning_rate), metrics=['accuracy'])
+        model.add(Dense(self.action_size, activation='linear'))
+        model.compile(loss='mse', optimizer=SGD(lr=learning_rate))
 
         return model
 
@@ -88,6 +88,8 @@ class DDDQNAgent:
 
     #replay based on samples from memory
     def replay(self):
+        if(len(self.memory) < batch_size):
+            return
         #sample the memory
         minibatch = random.sample(self.memory, batch_size)
 

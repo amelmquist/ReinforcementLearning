@@ -122,11 +122,13 @@ class gameEnv():
         c = scipy.misc.imresize(a[:,:,1],[84,84,1],interp='nearest')
         d = scipy.misc.imresize(a[:,:,2],[84,84,1],interp='nearest')
         a = np.stack([b,c,d],axis=2)
+        return a
 
-        plt.imshow(a)
+    def render(self):
+        plt.imshow(self.renderEnv())
         plt.pause(0.1)
 
-        return a
+
 
     def step(self,action):
         penalty = self.moveChar(action)
