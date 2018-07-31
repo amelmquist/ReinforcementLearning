@@ -126,7 +126,7 @@ class gameEnv():
 
     def render(self):
         plt.imshow(self.renderEnv())
-        plt.pause(0.1)
+        plt.pause(0.2)
 
 
 

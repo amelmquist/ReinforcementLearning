@@ -15,21 +15,22 @@ from collections import deque
 from keras.models import Sequential, Model, load_model
 from keras.layers import Input, Dense, Dropout, Activation, BatchNormalization, Conv2D, MaxPool2D, Flatten, Lambda, Concatenate
 from keras.optimizers import SGD, Adam
+from keras import losses
 from keras import backend as K
 
 
 #hyper parameters
-num_filters = 16
+num_filters = 32
 filter_size = 4
-learning_rate = 0.001
+learning_rate = 0.0001
 num_dense = 256
-mem_size = 2000
+mem_size = 1000000
 max_epsilon = 1.0
-min_epsilon = 0.01
-annealing_steps = 1000
-batch_size = 100
+min_epsilon = 0.1
+annealing_steps = 50000
+batch_size = 200
 num_batches = 1
-discout_rate = .95
+discout_rate = .99
 target_step = 0.001
 
 class DDDQNAgent:
@@ -86,7 +87,8 @@ class DDDQNAgent:
 
         model.summary()
 
-        model.compile(loss="mse", optimizer=Adam(lr=learning_rate))
+        # model.compile(loss="mse", optimizer=Adam(lr=learning_rate))
+        model.compile(loss=losses.mean_absolute_error, optimizer=Adam(lr=learning_rate))
 
         return model
 
@@ -125,67 +127,66 @@ class DDDQNAgent:
 
     #replay based on samples from memory
     def replay(self):
-        loss = 'NAN'
+        loss = -1
         if(len(self.memory) >= batch_size):
-            loss = 0
             #sample the memory
-            for i in range(num_batches):
-                minibatch = random.sample(self.memory, batch_size)
-                # minibatch_list = minibatch
-                # minibatch = np.asarray(minibatch)
+            minibatch = random.sample(self.memory, batch_size)
+            # minibatch_list = minibatch
+            # minibatch = np.asarray(minibatch)
 
-                # print("minibatch shape",minibatch.shape)
-                # print("minibatch type",type(minibatch))
-                # print("shape of states:",minibatch[:,0].shape)
-                states = []
-                actions = np.array([]).astype(int)
-                rewards = np.array([])
-                next_states = []
-                dones = np.array([]).astype(int)
-                for m in minibatch:
-                    states.append(m[0])
-                    actions = np.append(actions,m[1])
-                    rewards = np.append(rewards,m[2])
-                    next_states.append(m[3])
-                    dones = np.append(dones,m[4])
+            # print("minibatch shape",minibatch.shape)
+            # print("minibatch type",type(minibatch))
+            # print("shape of states:",minibatch[:,0].shape)
+            states = []
+            actions = np.array([]).astype(int)
+            rewards = np.array([])
+            next_states = []
+            dones = np.array([]).astype(int)
+            for m in minibatch:
+                states.append(m[0])
+                actions = np.append(actions,m[1])
+                rewards = np.append(rewards,m[2])
+                next_states.append(m[3])
+                dones = np.append(dones,m[4])
 
-                states = np.asarray(states)
-                next_states = np.asarray(next_states)
+            states = np.asarray(states)
+            next_states = np.asarray(next_states)
 
-                # print("States shape:",np.asarray(states).shape)
-                # print("actions shape:",actions.shape)
-                # print("rewards shape:",rewards.shape)
-                # print("next_states shape:",np.asarray(next_states).shape)
-                # print("dones shape:",dones.shape)
+            # print("States shape:",np.asarray(states).shape)
+            # print("actions shape:",actions.shape)
+            # print("rewards shape:",rewards.shape)
+            # print("next_states shape:",np.asarray(next_states).shape)
+            # print("dones shape:",dones.shape)
 
-                # exit(1)
-                # #do batch training
-                # states = np.reshape(minibatch[:,0],[len(minibatch_list), minibatch[0,0].shape[0],minibatch[0,0].shape[1],minibatch[0,0].shape[2]])
-                # print("State shape:",states.shape)
+            # exit(1)
+            # #do batch training
+            # states = np.reshape(minibatch[:,0],[len(minibatch_list), minibatch[0,0].shape[0],minibatch[0,0].shape[1],minibatch[0,0].shape[2]])
+            # print("State shape:",states.shape)
 
-                # exit(1)
-                #
-                # actions = minibatch[:,1]
-                # rewards = minibatch[:,2]
-                # next_states = minibatch[:,3]
-                # dones = minibatch[:,4]
+            # exit(1)
+            #
+            # actions = minibatch[:,1]
+            # rewards = minibatch[:,2]
+            # next_states = minibatch[:,3]
+            # dones = minibatch[:,4]
 
-                # print("next states shape:",next_states.shape)
-                # print("next states:",next_states)
+            # print("next states shape:",next_states.shape)
+            # print("next states:",next_states)
 
-                actions_newstate = np.argmax(self.main_model.predict(next_states),axis=1)
-                target_qvalues_newstate = self.target_model.predict(next_states)
-                double_q = target_qvalues_newstate[range(target_qvalues_newstate.shape[0]), actions_newstate]
+            # actions_newstate = np.argmax(self.main_model.predict(next_states),axis=1)
+            actions_newstate = np.argmax(self.main_model.predict(next_states),axis=1)
+            target_qvalues_newstate = self.target_model.predict(next_states)
+            double_q = target_qvalues_newstate[range(target_qvalues_newstate.shape[0]), actions_newstate]
 
-                done_multiplier = 1-dones   #0 if done, 1 if not
-                target_q = rewards + self.gamma*double_q+done_multiplier
+            done_multiplier = 1-dones   #0 if done, 1 if not
+            target_q = rewards + self.gamma*double_q+done_multiplier
 
 
-                q_values = self.main_model.predict(states)
-                for i in range(q_values.shape[0]):
-                    q_values[i, int(actions[i])] = target_q[i]
+            q_values = self.main_model.predict(states)
+            for i in range(q_values.shape[0]):
+                q_values[i, int(actions[i])] = target_q[i]
 
-                loss += self.main_model.train_on_batch(states,q_values)
+            loss = self.main_model.train_on_batch(states,q_values)
 
 
 

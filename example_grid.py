@@ -4,10 +4,12 @@ from agents.dddqn import DDDQNAgent
 from scipy import misc
 import matplotlib.pyplot as plt
 import time
+import numpy as np
 
 game_size = 5   #size of the square game grid
-num_episodes = 1000  #run through this many episodes
-max_num_turns = 30  #only allow the agent to take up to this many turns
+num_episodes = 50000  #run through this many episodes
+pre_train_episodes = 10000    #number of random episodes to play before training
+max_num_turns = 20  #only allow the agent to take up to this many turns
 render = False
 
 if __name__ == "__main__":
@@ -43,32 +45,37 @@ if __name__ == "__main__":
             time_act += pt1-pt0
             #find the result of that action
             next_state, reward, done = env.step(action)
+            if(np.array_equal(state,next_state)):
+                reward -= 0.2
+            # print("reward:",reward)
             pt2 = time.time()
             time_step = pt2-pt1
 
-            #
-
+            #update accumulated_reward
+            accumulated_reward += reward
 
 
             #remember that action
             agent.remember(state, action, reward, next_state, done)
+            # agent.remember(state, action, accumulated_reward, next_state, done)
 
-            #update totals
-            accumulated_reward += reward
+            #update state and turn number
             state = next_state
             turns += 1
 
             if(render):
                 env.render()
 
+        if(ep > pre_train_episodes):
+            #after each episode, have the agent replay from its memory
+            loss = agent.replay()
 
-        #after each episode, have the agent replay from its memory
-        loss = agent.replay()
-
-        #print out the episode stats
-        if(ep%10==0):
-            print("Episode:",ep,"| epsilon:","{0:.3f}".format(agent.epsilon), \
-            "| total_reward:",accumulated_reward," | loss:","{0:.3f}".format(loss))
+            #print out the episode stats
+            if(ep%10==0):
+                print("Episode:",ep-pre_train_episodes,"| epsilon:","{0:.3f}".format(agent.epsilon), \
+                "| total_reward:","{0:.1f}".format(accumulated_reward)," | loss:","{0:.3f}".format(loss))
+        elif(ep%1000==0):
+            print("Episode:",ep)
         reward_list.append((ep, accumulated_reward))
 
         pt3 = time.time()
@@ -128,3 +135,4 @@ if __name__ == "__main__":
             turns += 1
 
             env.render()
+        print("Total reward:",accumulated_reward)
