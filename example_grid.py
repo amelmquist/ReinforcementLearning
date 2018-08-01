@@ -7,7 +7,7 @@ import time
 import numpy as np
 
 game_size = 5   #size of the square game grid
-num_episodes = 50000  #run through this many episodes
+num_episodes = 10000  #run through this many episodes
 pre_train_episodes = 10000    #number of random episodes to play before training
 max_num_turns = 20  #only allow the agent to take up to this many turns
 render = False
